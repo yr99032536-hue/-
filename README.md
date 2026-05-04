@@ -13,6 +13,24 @@ thesis/
   trn/   # 번역 마크다운 출력
 ```
 
+## 설치
+
+플러그인 폴더에서 아래 명령을 한 번 실행한다.
+
+```bash
+bash scripts/install.sh --vault "/home/iy/GDrive/Obsidian Vault"
+```
+
+Java가 없는 apt 기반 Linux에서는 아래처럼 Java 설치까지 함께 시도할 수 있다.
+
+```bash
+bash scripts/install.sh \
+  --vault "/home/iy/GDrive/Obsidian Vault" \
+  --install-java
+```
+
+설치 스크립트는 Python 패키지 설치, Java 확인, `thesis` 폴더 생성을 한 번에 처리한다.
+
 ## `/trans` 동작 규칙
 
 `/trans` 요청을 받으면 Codex는 다음 순서로 처리한다.
@@ -30,6 +48,10 @@ thesis/
   Codex가 `/trans`를 처리할 때 따를 규칙
 - `scripts/setup_thesis_workspace.py`
   `thesis/pdf`, `thesis/fin`, `thesis/trn` 폴더 생성
+- `scripts/install.sh`
+  Python 의존성 설치, Java 확인, 워크스페이스 생성
+- `scripts/check_environment.py`
+  Java와 Python 패키지 설치 상태 점검
 - `scripts/trans.py`
   PDF 추출, 이미지 복사, 복합 그림 crop, 번역용 소스 노트 생성, 완료 PDF 이동
 - `scripts/composite_figure_crop.py`
@@ -39,8 +61,9 @@ thesis/
 
 ## 현재 상태
 
-- 로컬 플러그인 구조와 기계적 파싱 실행기는 완성
-- `thesis` 워크스페이스 초기화 스크립트 포함
+- 설치 스크립트 포함
+- 로컬 플러그인 구조와 기계적 파싱 실행기 포함
+- `thesis` 워크스페이스 자동 생성
 - 실제 문장 번역은 Codex 스킬이 수행
 - Codex marketplace 등록은 이 작업 환경에서 `.agents/plugins/` 경로 쓰기가 막혀 있어 보류
 
@@ -53,7 +76,7 @@ thesis/
 또는
 
 ```bash
-python3 plugins/paper-translate/scripts/setup_thesis_workspace.py \
+bash plugins/paper-translate/scripts/install.sh \
   --vault "/home/iy/GDrive/Obsidian Vault"
 ```
 

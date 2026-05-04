@@ -22,6 +22,22 @@ thesis/
 
 필요하면 `scripts/setup_thesis_workspace.py` 로 폴더를 생성한다.
 
+## 설치 규칙
+
+플러그인 설치 또는 초기 준비 요청을 받으면 아래 명령을 기본으로 사용한다.
+
+```bash
+bash plugins/paper-translate/scripts/install.sh --vault "<vault>"
+```
+
+Java가 없고 사용자가 시스템 설치까지 원하면 아래 명령을 사용한다.
+
+```bash
+bash plugins/paper-translate/scripts/install.sh --vault "<vault>" --install-java
+```
+
+이 설치 스크립트는 Python 의존성 설치, Java 확인, `thesis` 폴더 생성을 처리한다.
+
 ## 언제 사용하나
 
 - 사용자가 `/trans`를 입력했을 때
@@ -69,10 +85,17 @@ thesis/
 
 ## 참고 스크립트
 
-워크스페이스 생성:
+설치 및 환경 준비:
 
 ```bash
-python3 plugins/paper-translate/scripts/setup_thesis_workspace.py \
+bash plugins/paper-translate/scripts/install.sh \
+  --vault "/path/to/Obsidian Vault"
+```
+
+환경 점검:
+
+```bash
+python3 plugins/paper-translate/scripts/check_environment.py \
   --vault "/path/to/Obsidian Vault"
 ```
 
