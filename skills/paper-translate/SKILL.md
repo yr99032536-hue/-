@@ -35,11 +35,11 @@ thesis/
 2. `thesis/pdf` 안의 PDF 파일 목록을 확인한다.
 3. PDF가 여러 개면 전부 순서대로 처리한다.
 4. 각 PDF마다:
-   - `opendataloader-pdf` 로 추출한다
-   - 복합 그림은 통합 crop으로 처리한다
+   - `python3 plugins/paper-translate/scripts/trans.py prepare --vault "<vault>" --pdf "<pdf>"` 로 추출한다
+   - 생성된 `thesis/trn/{파일명}__source.md`와 manifest를 읽는다
    - 제목과 소제목은 영어 원문 병기 규칙으로 번역한다
    - 번역 노트를 `thesis/trn/{파일명} 번역.md` 로 저장한다
-   - 완료된 PDF는 `thesis/fin/` 으로 이동한다
+   - `python3 plugins/paper-translate/scripts/trans.py finish --vault "<vault>" --manifest "<manifest>"` 로 완료된 PDF를 `thesis/fin/` 으로 이동한다
 
 ## 전제 조건
 
@@ -74,6 +74,21 @@ thesis/
 ```bash
 python3 plugins/paper-translate/scripts/setup_thesis_workspace.py \
   --vault "/path/to/Obsidian Vault"
+```
+
+PDF 파싱 준비:
+
+```bash
+python3 plugins/paper-translate/scripts/trans.py prepare \
+  --vault "/path/to/Obsidian Vault"
+```
+
+완료 PDF 이동:
+
+```bash
+python3 plugins/paper-translate/scripts/trans.py finish \
+  --vault "/path/to/Obsidian Vault" \
+  --manifest "/path/to/Obsidian Vault/thesis/trn/.paper-translate/paper.json"
 ```
 
 복합 그림 crop:
