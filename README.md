@@ -42,6 +42,16 @@ bash scripts/install.sh \
 5. 번역 마크다운을 `thesis/trn`에 저장한다.
 6. `scripts/trans.py finish`로 처리가 끝난 PDF를 `thesis/fin`으로 이동한다.
 
+## 번역 규칙
+
+- 논문 제목도 번역하고, 원어는 괄호로 병기한다. 예: `3D 정보 추출 (3D Information Extraction)`
+- 섹션 제목과 소제목도 번역 후 영어 원문을 병기한다. 예: `## III. 방법 (Methods)`, `### A. 3D 정보 추출 (3D Information Extraction)`
+- 중요 전문 용어는 처음 등장할 때 괄호로 원어를 병기한다. 예: `합성곱(Convolution)`, `주의(Attention)`
+- 수식과 참고문헌은 원문을 유지한다
+- 수식은 항상 `$$ ... $$` 블록 수식으로 작성한다
+- 알고리즘과 의사코드는 fenced code block으로 쓰지 않고 일반 마크다운 문단/번호 목록 형식으로 작성한다
+- 복합 그림은 개별 조각 대신 통합 crop을 사용한다
+
 ## 포함 내용
 
 - `skills/paper-translate/SKILL.md`
