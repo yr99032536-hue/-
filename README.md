@@ -15,21 +15,28 @@
 
 ## 설치
 
-플러그인 폴더에서 아래 명령을 한 번 실행한다.
+플러그인을 `<vault>/plugins/paper-translate`에 둔 상태라면, 플러그인 폴더에서 아래 명령을 한 번 실행하면 된다.
 
 ```bash
-bash scripts/install.sh --vault "/home/iy/GDrive/Obsidian Vault"
+cd "<vault>/plugins/paper-translate"
+bash scripts/install.sh
 ```
 
 Java가 없는 apt 기반 Linux에서는 아래처럼 Java 설치까지 함께 시도할 수 있다.
 
 ```bash
+cd "<vault>/plugins/paper-translate"
 bash scripts/install.sh \
-  --vault "/home/iy/GDrive/Obsidian Vault" \
   --install-java
 ```
 
-설치 스크립트는 `/tmp` 아래 로컬 가상환경 생성, Python 패키지 설치, Java 확인, 레거시 `thesis/` 마이그레이션, `논문` 폴더 생성을 한 번에 처리한다.
+볼트 루트에서 실행하고 싶다면 아래처럼 명시적으로 볼트 경로를 넘기면 된다.
+
+```bash
+bash plugins/paper-translate/scripts/install.sh --vault "$PWD"
+```
+
+설치 스크립트는 `/tmp` 아래 로컬 가상환경 생성, Python 패키지 설치, Java 확인, 레거시 `thesis/` 마이그레이션, `논문` 폴더 생성을 한 번에 처리한다. 가상환경 경로를 바꾸고 싶으면 `PAPER_TRANSLATE_VENV=/custom/path` 환경변수를 사용할 수 있다.
 
 ## `/trans` 동작 규칙
 
@@ -89,20 +96,20 @@ bash scripts/install.sh \
 
 ```bash
 bash plugins/paper-translate/scripts/install.sh \
-  --vault "/home/iy/GDrive/Obsidian Vault"
+  --vault "$PWD"
 ```
 
 PDF 파싱 준비:
 
 ```bash
 python3 plugins/paper-translate/scripts/trans.py prepare \
-  --vault "/home/iy/GDrive/Obsidian Vault"
+  --vault "$PWD"
 ```
 
 번역 완료 PDF 이동:
 
 ```bash
 python3 plugins/paper-translate/scripts/trans.py finish \
-  --vault "/home/iy/GDrive/Obsidian Vault" \
-  --manifest "/home/iy/GDrive/Obsidian Vault/논문/trn/.paper-translate/OA-NBV.json"
+  --vault "$PWD" \
+  --manifest "$PWD/논문/trn/.paper-translate/paper.json"
 ```

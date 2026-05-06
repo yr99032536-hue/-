@@ -3,7 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VAULT="$(pwd)"
+DEFAULT_VAULT="$(cd "$PLUGIN_DIR/../.." && pwd)"
+VAULT="$DEFAULT_VAULT"
 INSTALL_JAVA=0
 USER_TAG="${USER:-codex}"
 VENV_DIR="${PAPER_TRANSLATE_VENV:-/tmp/paper-translate-venv-$USER_TAG}"
@@ -21,6 +22,10 @@ What it does:
   - migrates legacy thesis/ to 논문/ if needed
   - creates 논문/pdf, 논문/fin, 논문/trn
   - prints environment check results
+
+Defaults:
+  - if --vault is omitted, the installer assumes this plugin lives in <vault>/plugins/paper-translate
+  - override the runtime virtualenv path with PAPER_TRANSLATE_VENV=/custom/path
 USAGE
 }
 
