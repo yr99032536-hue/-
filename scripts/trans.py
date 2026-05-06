@@ -7,25 +7,49 @@ import sys
 import time
 from pathlib import Path
 
-import opendataloader_pdf
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from composite_figure_crop import crop_cluster, detect_clusters, load_kids, nearby_label_boxes, union_rect
 
+WORKSPACE_NAME = "논문"
+LEGACY_WORKSPACE_NAME = "thesis"
+
+
+class PaperTranslateError(RuntimeError):
+    pass
+
+
+def workspace_root(vault: Path):
+    preferred = vault / WORKSPACE_NAME
+    legacy = vault / LEGACY_WORKSPACE_NAME
+    if preferred.exists():
+        return preferred
+    if legacy.exists():
+        return legacy
+    return preferred
+
 
 def ensure_workspace(vault: Path):
-    thesis = vault / "thesis"
+    root = workspace_root(vault)
     paths = {
-        "pdf": thesis / "pdf",
-        "fin": thesis / "fin",
-        "trn": thesis / "trn",
-        "state": thesis / "trn" / ".paper-translate",
+        "root": root,
+        "pdf": root / "pdf",
+        "fin": root / "fin",
+        "trn": root / "trn",
+        "state": root / "trn" / ".paper-translate",
     }
     for path in paths.values():
-        path.mkdir(parents=True, exist_ok=True)
+        if isinstance(path, Path):
+            path.mkdir(parents=True, exist_ok=True)
     return paths
+
+
+def validate_workspace(paths):
+    for name in ("pdf", "fin", "trn", "state"):
+        path = paths[name]
+        if not path.exists():
+            raise PaperTranslateError(f"Workspace folder is missing: {path}")
 
 
 def unique_path(path: Path):
@@ -47,8 +71,18 @@ def discover_pdfs(pdf_dir: Path, explicit_pdf: str | None):
         pdf = Path(explicit_pdf).expanduser()
         if not pdf.is_absolute():
             pdf = Path.cwd() / pdf
-        return [pdf.resolve()]
-    return sorted(pdf_dir.glob("*.pdf"))
+        resolved = pdf.resolve()
+        if not resolved.exists():
+            raise PaperTranslateError(f"PDF file not found: {resolved}")
+        if resolved.suffix.lower() != ".pdf":
+            raise PaperTranslateError(f"Expected a PDF file, got: {resolved}")
+        return [resolved]
+    pdfs = sorted(pdf_dir.glob("*.pdf"))
+    if pdfs:
+        return pdfs
+    raise PaperTranslateError(
+        f"No PDFs found in {pdf_dir}. Put files into `{WORKSPACE_NAME}/pdf` and run the command again."
+    )
 
 
 def extract_pdf(pdf_path: Path):
@@ -56,18 +90,29 @@ def extract_pdf(pdf_path: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     os.environ.setdefault("JAVA_TOOL_OPTIONS", "-Djava.awt.headless=true")
-    opendataloader_pdf.convert(
-        input_path=[str(pdf_path)],
-        output_dir=str(output_dir),
-        format="markdown,json",
-        image_output="external",
-        image_format="png",
-    )
+    try:
+        import opendataloader_pdf
+
+        opendataloader_pdf.convert(
+            input_path=[str(pdf_path)],
+            output_dir=str(output_dir),
+            format="markdown,json",
+            image_output="external",
+            image_format="png",
+        )
+    except ModuleNotFoundError as exc:
+        raise PaperTranslateError(
+            "Python package `opendataloader-pdf` is missing. Run `bash scripts/install.sh --vault <vault>` first."
+        ) from exc
+    except Exception as exc:
+        raise PaperTranslateError(
+            "PDF extraction failed. Check that Java is installed and `opendataloader-pdf` works in this environment."
+        ) from exc
 
     json_files = sorted(output_dir.glob("*.json"))
     markdown_files = sorted(output_dir.glob("*.md"))
     if not json_files or not markdown_files:
-        raise RuntimeError(f"opendataloader-pdf did not create markdown/json files in {output_dir}")
+        raise PaperTranslateError(f"Extraction finished, but markdown/json outputs are missing in {output_dir}")
 
     return {
         "output_dir": output_dir,
@@ -117,7 +162,10 @@ def crop_composites(pdf_path: Path, json_path: Path, attachment_dir: Path):
 
 
 def obsidian_path(path: Path, vault: Path):
-    return path.resolve().relative_to(vault.resolve()).as_posix()
+    try:
+        return path.resolve().relative_to(vault.resolve()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def rewrite_image_links(markdown: str, pdf_stem: str, vault: Path, attachment_dir: Path):
@@ -132,7 +180,7 @@ def write_source_note(pdf_path: Path, extracted_markdown: Path, vault: Path, trn
 
     body = f"""---
 title: "{pdf_path.stem} source"
-source_pdf: "{obsidian_path(pdf_path, vault) if pdf_path.is_relative_to(vault) else str(pdf_path)}"
+source_pdf: "{obsidian_path(pdf_path, vault)}"
 translation_status: source
 tags:
   - paper-translate/source
@@ -152,6 +200,7 @@ tags:
 
 def write_manifest(paths, pdf_path: Path, extract_info, source_note: Path, attachment_dir: Path, composites):
     manifest = {
+        "workspace": str(paths["root"]),
         "pdf": str(pdf_path),
         "stem": pdf_path.stem,
         "source_note": str(source_note),
@@ -169,7 +218,7 @@ def write_manifest(paths, pdf_path: Path, extract_info, source_note: Path, attac
 
 def prepare_one(vault: Path, paths, pdf_path: Path):
     if not pdf_path.exists():
-        raise FileNotFoundError(pdf_path)
+        raise PaperTranslateError(f"PDF file not found: {pdf_path}")
 
     extract_info = extract_pdf(pdf_path)
     attachment_dir = paths["trn"] / "_attachments" / pdf_path.stem
@@ -183,26 +232,54 @@ def prepare_one(vault: Path, paths, pdf_path: Path):
 
 
 def finish_one(paths, pdf_path: Path, final_note: Path | None):
+    if not pdf_path.exists():
+        raise PaperTranslateError(f"PDF file not found for finish step: {pdf_path}")
     if final_note is not None and not final_note.exists():
-        raise FileNotFoundError(f"Final note does not exist: {final_note}")
+        raise PaperTranslateError(
+            f"Final translated note is missing: {final_note}. Create the translated markdown first, then rerun finish."
+        )
     target = unique_path(paths["fin"] / pdf_path.name)
     shutil.move(str(pdf_path), str(target))
     return target
 
 
 def load_manifest(path: Path):
+    if not path.exists():
+        raise PaperTranslateError(f"Manifest file not found: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def command_prepare(vault: Path, paths, explicit_pdf: str | None):
+    pdfs = discover_pdfs(paths["pdf"], explicit_pdf)
+    results = [prepare_one(vault, paths, pdf) for pdf in pdfs]
+    return {
+        "workspace": str(paths["root"]),
+        "prepared": results,
+        "message": f"Prepared {len(results)} PDF(s). Translate the generated `__source.md` notes in `{paths['trn']}`.",
+    }
+
+
+def command_finish(paths, manifest_arg: str | None, pdf_arg: str | None, final_note_arg: str | None):
+    manifest = load_manifest(Path(manifest_arg).expanduser()) if manifest_arg else {}
+    pdf_value = pdf_arg or manifest.get("pdf")
+    if not pdf_value:
+        raise PaperTranslateError("Finish requires `--manifest` or `--pdf`.")
+    pdf = Path(pdf_value).expanduser()
+    final_note_value = final_note_arg or manifest.get("expected_final_note")
+    final_note = Path(final_note_value).expanduser() if final_note_value else None
+    moved_to = finish_one(paths, pdf, final_note)
+    return {"workspace": str(paths["root"]), "moved_to": str(moved_to)}
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Prepare and finish thesis PDF translation jobs.")
+    parser = argparse.ArgumentParser(description="Prepare and finish paper translation jobs in the Obsidian workspace.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    prepare = subparsers.add_parser("prepare", help="Extract PDFs and create source notes in thesis/trn")
+    prepare = subparsers.add_parser("prepare", help="Extract PDFs and create source notes in 논문/trn")
     prepare.add_argument("--vault", default=str(Path.cwd()), help="Obsidian vault root")
-    prepare.add_argument("--pdf", help="Specific PDF to prepare. Defaults to all PDFs in thesis/pdf")
+    prepare.add_argument("--pdf", help="Specific PDF to prepare. Defaults to all PDFs in 논문/pdf")
 
-    finish = subparsers.add_parser("finish", help="Move a completed PDF to thesis/fin")
+    finish = subparsers.add_parser("finish", help="Move a completed PDF to 논문/fin")
     finish.add_argument("--vault", default=str(Path.cwd()), help="Obsidian vault root")
     finish.add_argument("--manifest", help="Manifest created by prepare")
     finish.add_argument("--pdf", help="PDF path to move")
@@ -211,23 +288,33 @@ def main():
     args = parser.parse_args()
     vault = Path(args.vault).expanduser().resolve()
     paths = ensure_workspace(vault)
+    validate_workspace(paths)
 
-    if args.command == "prepare":
-        pdfs = discover_pdfs(paths["pdf"], args.pdf)
-        if not pdfs:
-            print(json.dumps({"prepared": [], "message": "No PDFs found in thesis/pdf"}, ensure_ascii=False))
+    try:
+        if args.command == "prepare":
+            print(json.dumps(command_prepare(vault, paths, args.pdf), ensure_ascii=False, indent=2))
             return
-        results = [prepare_one(vault, paths, pdf) for pdf in pdfs]
-        print(json.dumps({"prepared": results}, ensure_ascii=False, indent=2))
-        return
 
-    if args.command == "finish":
-        manifest = load_manifest(Path(args.manifest)) if args.manifest else {}
-        pdf = Path(args.pdf or manifest.get("pdf", "")).expanduser()
-        final_note_arg = args.final_note or manifest.get("expected_final_note")
-        final_note = Path(final_note_arg).expanduser() if final_note_arg else None
-        moved_to = finish_one(paths, pdf, final_note)
-        print(json.dumps({"moved_to": str(moved_to)}, ensure_ascii=False))
+        if args.command == "finish":
+            print(json.dumps(command_finish(paths, args.manifest, args.pdf, args.final_note), ensure_ascii=False, indent=2))
+            return
+    except PaperTranslateError as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "command": args.command,
+                    "workspace": str(paths["root"]),
+                    "error": str(exc),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    raise PaperTranslateError(f"Unsupported command: {args.command}")
 
 
 if __name__ == "__main__":

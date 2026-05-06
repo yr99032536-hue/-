@@ -17,8 +17,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Paper Translate",
-    "shortDescription": "thesis 워크스페이스의 PDF 논문을 번역 노트로 정리",
-    "longDescription": "thesis/pdf 입력, thesis/fin 이동, thesis/trn 출력 규칙과 복합 그림 통합 crop 처리를 묶은 로컬 Codex 플러그인.",
+    "shortDescription": "논문 워크스페이스의 PDF 논문을 번역 노트로 정리",
+    "longDescription": "논문/pdf 입력, 논문/fin 이동, 논문/trn 출력 규칙과 복합 그림 통합 crop 처리를 묶은 로컬 Codex 플러그인.",
     "developerName": "iy",
     "category": "Productivity",
     "capabilities": [
@@ -26,9 +26,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "/trans 를 실행해서 thesis/pdf의 논문을 처리해줘.",
+      "/trans 를 실행해서 논문/pdf의 논문을 처리해줘.",
       "복합 그림은 통합 crop으로 처리해줘.",
-      "번역 노트는 thesis/trn에 저장해줘."
+      "번역 노트는 논문/trn에 저장해줘."
     ],
     "brandColor": "#2F855A"
   }

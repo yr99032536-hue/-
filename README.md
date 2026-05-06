@@ -1,13 +1,13 @@
 # Paper Translate
 
-로컬 Codex 플러그인 `paper-translate`는 Obsidian 볼트 안에 `thesis` 작업 폴더를 두고, 논문 PDF를 번역 노트로 정리하는 흐름을 다룬다.
+로컬 Codex 플러그인 `paper-translate`는 Obsidian 볼트 안에 `논문` 작업 폴더를 두고, 논문 PDF를 번역 노트로 정리하는 흐름을 다룬다.
 
 ## 워크스페이스 구조
 
 플러그인의 기본 작업 폴더는 아래와 같다.
 
 ```text
-thesis/
+논문/
   pdf/   # 번역 대기 PDF
   fin/   # 번역 완료 후 이동된 PDF
   trn/   # 번역 마크다운 출력
@@ -29,18 +29,20 @@ bash scripts/install.sh \
   --install-java
 ```
 
-설치 스크립트는 Python 패키지 설치, Java 확인, `thesis` 폴더 생성을 한 번에 처리한다.
+설치 스크립트는 `/tmp` 아래 로컬 가상환경 생성, Python 패키지 설치, Java 확인, 레거시 `thesis/` 마이그레이션, `논문` 폴더 생성을 한 번에 처리한다.
 
 ## `/trans` 동작 규칙
 
 `/trans` 요청을 받으면 Codex는 다음 순서로 처리한다.
 
-1. `thesis/pdf` 폴더를 확인한다.
+1. `논문/pdf` 폴더를 확인한다.
 2. 안에 있는 PDF를 번역 대상으로 잡는다.
 3. `scripts/trans.py prepare`로 PDF 본문, JSON, 이미지, 복합 그림을 추출한다.
-4. 생성된 `thesis/trn/*__source.md`를 바탕으로 Codex가 번역 마크다운을 작성한다.
-5. 번역 마크다운을 `thesis/trn`에 저장한다.
-6. `scripts/trans.py finish`로 처리가 끝난 PDF를 `thesis/fin`으로 이동한다.
+4. 생성된 `논문/trn/*__source.md`를 바탕으로 Codex가 번역 마크다운을 작성한다.
+5. 번역 마크다운을 `논문/trn`에 저장한다.
+6. `scripts/trans.py finish`로 처리가 끝난 PDF를 `논문/fin`으로 이동한다.
+
+`prepare`와 `finish`는 내부 단계다. 평소에는 사용자가 이 둘을 직접 순서대로 실행할 필요 없이, Codex에서 `/trans`를 요청하면 준비 추출과 완료 이동을 묶어서 처리한다.
 
 ## 번역 규칙
 
@@ -56,10 +58,10 @@ bash scripts/install.sh \
 
 - `skills/paper-translate/SKILL.md`
   Codex가 `/trans`를 처리할 때 따를 규칙
-- `scripts/setup_thesis_workspace.py`
-  `thesis/pdf`, `thesis/fin`, `thesis/trn` 폴더 생성
+- `scripts/setup_workspace.py`
+  `논문/pdf`, `논문/fin`, `논문/trn` 폴더 생성과 레거시 `thesis/` 마이그레이션
 - `scripts/install.sh`
-  Python 의존성 설치, Java 확인, 워크스페이스 생성
+  로컬 가상환경 생성, Python 의존성 설치, Java 확인, 워크스페이스 생성
 - `scripts/check_environment.py`
   Java와 Python 패키지 설치 상태 점검
 - `scripts/trans.py`
@@ -73,7 +75,7 @@ bash scripts/install.sh \
 
 - 설치 스크립트 포함
 - 로컬 플러그인 구조와 기계적 파싱 실행기 포함
-- `thesis` 워크스페이스 자동 생성
+- `논문` 워크스페이스 자동 생성
 - 실제 문장 번역은 Codex 스킬이 수행
 - Codex marketplace 등록은 이 작업 환경에서 `.agents/plugins/` 경로 쓰기가 막혀 있어 보류
 
@@ -102,5 +104,5 @@ python3 plugins/paper-translate/scripts/trans.py prepare \
 ```bash
 python3 plugins/paper-translate/scripts/trans.py finish \
   --vault "/home/iy/GDrive/Obsidian Vault" \
-  --manifest "/home/iy/GDrive/Obsidian Vault/thesis/trn/.paper-translate/OA-NBV.json"
+  --manifest "/home/iy/GDrive/Obsidian Vault/논문/trn/.paper-translate/OA-NBV.json"
 ```

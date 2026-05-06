@@ -12,6 +12,8 @@ REQUIRED_MODULES = {
     "opendataloader_pdf": "opendataloader-pdf",
     "fitz": "PyMuPDF",
 }
+WORKSPACE_NAME = "논문"
+LEGACY_WORKSPACE_NAME = "thesis"
 
 
 def module_ok(module_name: str):
@@ -34,13 +36,45 @@ def java_status():
 
 
 def workspace_status(vault: Path):
-    thesis = vault / "thesis"
+    workspace = vault / WORKSPACE_NAME
+    legacy = vault / LEGACY_WORKSPACE_NAME
     folders = {
-        "pdf": thesis / "pdf",
-        "fin": thesis / "fin",
-        "trn": thesis / "trn",
+        "pdf": workspace / "pdf",
+        "fin": workspace / "fin",
+        "trn": workspace / "trn",
     }
-    return {name: {"path": str(path), "exists": path.exists()} for name, path in folders.items()}
+    return {
+        "name": WORKSPACE_NAME,
+        "path": str(workspace),
+        "legacy_path": str(legacy),
+        "legacy_exists": legacy.exists(),
+        "folders": {name: {"path": str(path), "exists": path.exists()} for name, path in folders.items()},
+    }
+
+
+def build_messages(modules, java, workspace):
+    messages = []
+
+    missing_packages = [item["package"] for item in modules.values() if not item["ok"]]
+    if missing_packages:
+        joined = ", ".join(missing_packages)
+        messages.append(f"Missing Python packages: {joined}. Run `bash scripts/install.sh --vault <vault>`.")
+
+    if not java["ok"]:
+        messages.append("Java is missing or not runnable. Install Java 11+ or rerun `bash scripts/install.sh --vault <vault> --install-java` on apt-based Linux.")
+
+    missing_folders = [name for name, item in workspace["folders"].items() if not item["exists"]]
+    if missing_folders:
+        joined = ", ".join(f"{WORKSPACE_NAME}/{name}" for name in missing_folders)
+        messages.append(f"Workspace folders are missing: {joined}. Run `bash scripts/install.sh --vault <vault>`.")
+
+    if workspace["legacy_exists"]:
+        messages.append(f"Legacy workspace `{LEGACY_WORKSPACE_NAME}/` is still present. The installer will migrate it to `{WORKSPACE_NAME}/`.")
+
+    if not messages:
+        messages.append("Environment looks good. You can place PDFs in `논문/pdf` and run `/trans`.")
+
+    return messages
 
 
 def main():
@@ -60,6 +94,7 @@ def main():
         "workspace": workspace_status(vault),
     }
     payload["ok"] = all(item["ok"] for item in modules.values()) and payload["java"]["ok"]
+    payload["messages"] = build_messages(payload["modules"], payload["java"], payload["workspace"])
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     if not payload["ok"]:
